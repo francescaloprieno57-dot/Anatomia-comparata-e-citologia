@@ -1,1 +1,732 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Quiz - Anatomia Comparata e Citologia</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: var(--primary-color);
+            text-align: center;
+        }
+        .menu-lezioni {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-risposta {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            text-align: left;
+            background-color: #ecf0f1;
+            color: #333;
+            border: 1px solid #bdc3c7;
+        }
+        .btn-risposta:hover {
+            background-color: #dfe6e9;
+        }
+        .corretta {
+            background-color: var(--success-color) !important;
+            color: white !important;
+        }
+        .errata {
+            background-color: var(--error-color) !important;
+            color: white !important;
+        }
+        .nascondi {
+            display: none !important;
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .risultati-box {
+            text-align: center;
+            padding: 20px;
+            background: #e8f8f5;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>Anatomia Comparata e Citologia</h1>
+    <p style="text-align: center; color: #666;">Simulatore d'esame ufficiale</p>
+
+    <!-- MENU PRINCIPALE SCELTA LEZIONI -->
+    <div id="menu-container">
+        <h2>Seleziona la Lezione</h2>
+        <div class="menu-lezioni" id="lista-lezioni">
+            <!-- Verrà popolato dinamicamente via JS -->
+        </div>
+        <div style="margin-top: 30px; text-align: center;">
+            <button onclick="avviaRipassoErrori()" style="background-color: #e67e22;" id="btn-ripasso" class="nascondi">Ripassa Domande Sbagliate</button>
+        </div>
+    </div>
+
+    <!-- SEZIONE QUIZ -->
+    <div id="quiz-container" class="nascondi">
+        <h2 id="titolo-lezione-corrente"></h2>
+        <div id="progresso" style="font-weight: bold; margin-bottom: 15px;"></div>
+        <div id="domanda-testo" style="font-size: 18px; margin-bottom: 20px; font-weight: 500;"></div>
+        <div id="opzioni-container"></div>
+        
+        <div class="nav-buttons">
+            <button onclick="tornaAlMenu()" style="background-color: #7f8c8d;">Indietro al Menu</button>
+            <button id="btn-prossima" onclick="prossimaDomanda()" class="nascondi">Prossima Domanda</button>
+        </div>
+    </div>
+
+    <!-- SEZIONE RISULTATI -->
+    <div id="risultati-container" class="nascondi">
+        <h2>Risultati della Lezione</h2>
+        <div class="risultati-box">
+            <p id="testo-punteggio" style="font-size: 20px; font-weight: bold;"></p>
+            <p id="testo-percentuale" style="font-size: 18px;"></p>
+        </div>
+        <div style="text-align: center; margin-top: 25px;">
+            <button onclick="tornaAlMenu()">Torna alle Lezioni</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Database delle domande (struttura pronta per accogliere le lezioni)
+    const databaseQuiz = {
+        "lezione2": {
+            titolo: "Lezione 002 - Introduzione e Cellula",
+            domande: [
+                {
+                    testo: "La teoria cellulare afferma che:",
+                    opzioni: [
+                        "le cellule sono il risultato di una creazione divina",
+                        "le cellule sono tutte differenti tra loro",
+                        "le cellule si generano spontaneamente",
+                        "le cellule derivano da altre cellule"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "La comparsa della cellula eucariotica risale a:",
+                    opzioni: [
+                        "3,5 miliardi di anni fa",
+                        "1 milione di anni fa",
+                        "1 miliardo di anni fa",
+                        "3,5 milioni di anni fa"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "All'interno del nucleo sono presenti:",
+                    opzioni: [
+                        "solo DNA",
+                        "solo RNA",
+                        "RNA e DNA",
+                        "dipende se si tratta di una cellula eucariotica o procariotica"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "L'angstrom (Å):",
+                    opzioni: [
+                        "tutte le risposte sono corrette",
+                        "è l'unità di misura dell'atomo",
+                        "equivale alla decimilionesima parte del millimetro",
+                        "equivale alla decimillesima parte del micrometro"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "I batteri:",
+                    opzioni: [
+                        "sono visibili esclusivamente al microscopio elettronico",
+                        "possono formare tessuti patogeni",
+                        "sono organismi eucarioti",
+                        "sono organismi procarioti"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Gli organismi procarioti:",
+                    opzioni: [
+                        "sono in grado di svolgere vita autonoma",
+                        "sono provvisti di capside",
+                        "comparvero sulla Terra circa 1,5 miliardi di anni fa",
+                        "formano tessuti particolarmente resistenti"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "Le dimensioni dei virus sono comprese tra:",
+                    opzioni: [
+                        "10 e 300 mm",
+                        "300 e 1000 nm",
+                        "1 e 3 mm",
+                        "10 e 300 nm"
+                    ],
+                    corretta: 3
+                }
+            ]
+        },
+        "lezione3": {
+            titolo: "Lezione 003 - Organuli e Strutture Cellulari",
+            domande: [
+                {
+                    testo: "I lisosomi contengono:",
+                    opzioni: [
+                        "proteine dalla struttura quaternaria",
+                        "materiale di riserva destinato all'ambiente intracellulare",
+                        "enzimi idrolitici sintetizzati dal reticolo endoplasmatico liscio",
+                        "nessuna delle risposte è corretta"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "I mitocondri:",
+                    opzioni: [
+                        "sono rivestiti da una duplice membrana",
+                        "tutte le risposte sono corrette",
+                        "sono abbondanti nelle cellule che consumano grandi quantità di ATP",
+                        "sono sede dei processi ossidativi"
+                    ],
+                    corretta: 1
+                },
+                {
+                    testo: "Il reticolo endoplasmatico liscio è deputato alla sintesi di:",
+                    opzioni: [
+                        "grassi complessi",
+                        "acido desossiribonucleico",
+                        "materiale con funzione strutturale",
+                        "proteine destinate ad essere espulse dalla cellula"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "I ribosomi sono costituiti da:",
+                    opzioni: [
+                        "DNA se presenti nel nucleo",
+                        "RNA e proteine",
+                        "proteine se liberi nel citoplasma",
+                        "DNA e acidi grassi"
+                    ],
+                    corretta: 1
+                },
+                {
+                    testo: "La membrana plasmatica viene formata da:",
+                    opzioni: [
+                        "l'apparato del Golgi",
+                        "il reticolo endoplasmatico rugoso",
+                        "il nucleo",
+                        "un sistema membranoso nucleare"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "La membrana plasmatica, al pari delle membrane endocellulari, è costituita da:",
+                    opzioni: [
+                        "molecole anfipatiche poiché dotate di una testa polare ed una coda idrofoba",
+                        "molecole anfipatiche dalla coda idrofila e teste apolari",
+                        "molecole apolari poiché ricche di proteine",
+                        "molecole polari rappresentate da una testa idrofila ed una coda idrofoba"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "Ciglia e flagelli:",
+                    opzioni: [
+                        "possono essere presenti sia in cellule eucariotiche che procariotiche",
+                        "caratterizzano esclusivamente i procarioti",
+                        "nessuna delle risposte è corretta",
+                        "le ciglia sono presenti negli eucarioti ed i flagelli nei procarioti"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "L'assonema di ciglia e flagelli è costituito da:",
+                    opzioni: [
+                        "5 coppie di microtubuli concentrici",
+                        "9 coppie di microtubuli",
+                        "20 microtubuli",
+                        "12 coppie di protofilamenti uguali a due a due"
+                    ],
+                    corretta: 1
+                },
+                {
+                    testo: "I microfilamenti presenti nel muscolo scheletrico sono ricchi di actina e miosina e...",
+                    opzioni: [
+                        "hanno diametro superiore rispetto ai microtubuli",
+                        "sono disposte in maniera ordinata",
+                        "sono costituite da 13 protofilamenti",
+                        "tutte le risposte sono errate"
+                    ],
+                    corretta: 1
+                }
+            ]
+        },
+        "lezione4": {
+            titolo: "Lezione 004 - Metodi di Osservazione e Fissazione",
+            domande: [
+                {
+                    testo: "Il motivo per cui è importante fissare le cellule prima dell'osservazione è:",
+                    opzioni: [
+                        "per permettere al colorante di penetrare nella cellula",
+                        "per impedire l'instaurarsi di fenomeni di autolisi",
+                        "per evitare l'insorgenza di artefatti",
+                        "tutte le risposte sono corrette"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Il metodo Papanicolau:",
+                    opzioni: [
+                        "permette l'osservazione del tessuto senza fissazione",
+                        "prevede una colorazione dicromica",
+                        "è un procedimento che prevede alcuni passaggi alcolici",
+                        "colora il citoplasma di un blu intenso"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Un buon colorante deve avere particolari caratteristiche quali:",
+                    opzioni: [
+                        "deve colorare con diverse gradazioni di rosa",
+                        "deve legarsi al tessuto in maniera reversibile",
+                        "deve essere necessariamente naturale",
+                        "nessuna delle risposte è corretta"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Per eseguire il Pap-test è necessario:",
+                    opzioni: [
+                        "eseguire uno striscio senza colorante",
+                        "nessuna delle risposte è corretta",
+                        "utilizzare il fissativo di Bouin",
+                        "colorare il tessuto con il metodo Papanicolau"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Un adeguato spessore del tessuto per l'osservazione al microscopio ottico è compreso tra:",
+                    opzioni: [
+                        "5 millimetri",
+                        "2-5 micron",
+                        "2-4 millimetri",
+                        "10-30 micron"
+                    ],
+                    corretta: 1
+                }
+            ]
+        },
+        "lezione5": {
+            titolo: "Lezione 005 - Frazionamento e Tecniche Biochimiche",
+            domande: [
+                {
+                    testo: "Le tecniche di frazionamento cellulare consentono di ottenere:",
+                    opzioni: [
+                        "un'analisi di tipo qualitativo e quantitativo",
+                        "un'analisi di tipo qualitativo",
+                        "nessuna delle risposte è corretta",
+                        "un'analisi di tipo quantitativo"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "Per mezzo di un frazionamento chimico si può ottenere separazione di:",
+                    opzioni: [
+                        "tutte le sostanze inorganiche",
+                        "tutte le macromolecole biologiche",
+                        "solo molecole idrofobiche",
+                        "sostanze organiche purché il loro peso molecolare sia elevato"
+                    ],
+                    corretta: 1
+                },
+                {
+                    testo: "Le ultracentrifughe possono raggiungere la velocità di:",
+                    opzioni: [
+                        "7.000 giri al secondo",
+                        "700 giri al secondo",
+                        "70.000 giri al minuto",
+                        "7.000 giri al minuto"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Nelle tecniche elettroforetiche verso il catodo migrano:",
+                    opzioni: [
+                        "cariche negative",
+                        "cariche positive",
+                        "molecole elettricamente neutre",
+                        "molecole ad elevato peso molecolare"
+                    ],
+                    corretta: 1
+                }
+            ]
+        },
+        "lezione6": {
+            titolo: "Lezione 006 - Microscopia Ottica ed Elettronica",
+            domande: [
+                {
+                    testo: "Il microscopio elettronico differisce da quello ottico per:",
+                    opzioni: [
+                        "la possibilità di utilizzare numerose colorazioni tricromiche",
+                        "le sue più piccole dimensioni",
+                        "un maggior potere risolutivo",
+                        "l'utilizzo dei fotoni e non di elettroni"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Il condensatore di un microscopio ottico è costituito da:",
+                    opzioni: [
+                        "una parte meccanica del microscopio ottico",
+                        "un sistema di messa a fuoco del campione da osservare",
+                        "un sistema di lenti in grado di concentrare un fascio luminoso",
+                        "un sistema di lenti convergenti l'immagine ingrandita"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Il potere di risoluzione di un microscopio ottico rappresenta:",
+                    opzioni: [
+                        "la distanza di 200 micron",
+                        "nessuna delle risposte è corretta",
+                        "la distanza minima alla quale due punti sono percepiti come distinti",
+                        "la distanza massima alla quale due punti sono percepiti come distinti"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Lo stereomicroscopio, rispetto al microscopio ottico, consente:",
+                    opzioni: [
+                        "di osservare oggetti tridimensionali",
+                        "una più semplice messa a fuoco del campione in esame",
+                        "nessuna delle risposte è corretta",
+                        "un maggior potere di risoluzione"
+                    ],
+                    corretta: 0
+                }
+            ]
+        },
+        "lezione7": {
+            titolo: "Lezione 007 - Colture Cellulari",
+            domande: [
+                {
+                    testo: "Ritmi proliferativi irregolari caratterizzano:",
+                    opzioni: [
+                        "Le fasi finali di una cultura secondaria",
+                        "le culture in vitro",
+                        "le prime fasi di crescita di una coltura primaria",
+                        "culture mantenute a temperature basse"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Una cultura cellulare in vitro si definisce confluente quando:",
+                    opzioni: [
+                        "mai, solo le culture in vivo possono essere confluenti",
+                        "contiene solo batteri della stessa tipologia",
+                        "la superficie di crescita non risulta più sufficiente all'inserimento di nuove cellule figlie",
+                        "le cellule presenti hanno assorbito tutto il colorante disponibile"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Il sistema delle colture d'organo si mostra idoneo per:",
+                    opzioni: [
+                        "studiare le capacità autogenerative degli organi in individui adulti",
+                        "studiare lo sviluppo delle capacità autodifferenziative di organi embrionali isolati",
+                        "clonare organi danneggiati",
+                        "tutte le risposte sono corrette"
+                    ],
+                    corretta: 1
+                },
+                {
+                    testo: "Una sospensione cellulare deve essere continuamente agitata perché:",
+                    opzioni: [
+                        "le cellule andrebbero incontro a necrosi",
+                        "le cellule tenderebbero ad aderire al substrato",
+                        "il rischio di inquinamento sarebbe elevato",
+                        "le cellule tenderebbero a crescere fuori controllo"
+                    ],
+                    corretta: 1
+                }
+            ]
+        },
+        "lezione8": {
+            titolo: "Lezione 008 - Genomica e Regolazione Genica",
+            domande: [
+                {
+                    testo: "Lo splicing è:",
+                    opzioni: [
+                        "un processo regolativo post-trascrizionale",
+                        "un fenomeno che si realizza a livello embrionale",
+                        "un processo regolativo post-traduzionale",
+                        "un evento che si realizza in condizioni patologiche"
+                    ],
+                    corretta: 0
+                },
+                {
+                    testo: "Le sequenze mediamente ripetitive del DNA:",
+                    opzioni: [
+                        "sono presenti in tutti i vertebrati ad eccezione dei mammiferi",
+                        "sono presenti esclusivamente nelle cellule vegetali",
+                        "non trascrivono nessun tipo di RNA",
+                        "vengono tradotte in RNA mitocondriale"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "La regolazione della sintesi proteica nelle cellule procariote si realizza:",
+                    opzioni: [
+                        "esclusivamente in base al genoma",
+                        "in parallelo alla sintesi glucidica",
+                        "in maniera strettamente dipendente alla temperatura",
+                        "in funzione delle condizioni ambientali"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Gli istoni sono proteine in grado di:",
+                    opzioni: [
+                        "legarsi al DNA",
+                        "tutte le risposte sono corrette",
+                        "formare i nucleosomi",
+                        "avere una funzione regolatrice"
+                    ],
+                    corretta: 1
+                }
+            ]
+        },
+        "lezione9": {
+            titolo: "Lezione 009 - Evoluzione e Vertebrati",
+            domande: [
+                {
+                    testo: "Secondo la definizione di Darwin una specie è \"forte\" se:",
+                    opzioni: [
+                        "ha importanti meccanismi di difesa e offesa",
+                        "mostra una maggiore prestanza fisica rispetto alle altre specie",
+                        "si mostra particolarmente adattabile alle variazioni ambientali",
+                        "riesce a colonizzare il maggior numero di habitat"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Per filogenesi si intende:",
+                    opzioni: [
+                        "il graduale concretarsi e organizzarsi di una nuova specie",
+                        "il processo che porta allo sviluppo di una determinata forma o struttura",
+                        "l'insieme delle relazioni di discendenza evolutiva tra gruppi di organismi",
+                        "lo sviluppo individuale degli embrioni"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "Forma e struttura di un organo sono:",
+                    opzioni: [
+                        "sotto esclusivo controllo genetico",
+                        "nessuna delle risposte è corretta",
+                        "sotto controllo genetico ed ambientale",
+                        "sotto esclusivo controllo ambientale"
+                    ],
+                    corretta: 2
+                },
+                {
+                    testo: "I vertebrati:",
+                    opzioni: [
+                        "sono tutti organismi pluricellulari eterotrofi o autotrofi purchè pluricellulari",
+                        "sono organismi con evidente tendenza alla cefalizzazione e presenza di arti",
+                        "sono esclusivamente eterotrofi sia pluri che unicellulari",
+                        "sono tutti organismi pluricellulari eterotrofi caratterizzati da un evidente cefalizzazione"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Il phylum dei vertebrati:",
+                    opzioni: [
+                        "comprende sei classi tassonomiche",
+                        "condivide, con il phylum dei cordati, la presenza della corda",
+                        "comprende due subphyla: cefalocordati e tunicati",
+                        "la domanda non è corretta"
+                    ],
+                    corretta: 3
+                },
+                {
+                    testo: "Secondo la definizione di Lamarck una specie è:",
+                    opzioni: [
+                        "un insieme di organismi simili che popolano lo stesso habitat",
+                        "un insieme di organismi simili che possono incrociarsi generando una prole non necessariamente feconda",
+                        "un insieme di organismi in grado di incrociarsi che occupano la stessa nicchia ecologica",
+                        "un insieme di organismi simili che possono incrociarsi generando una prole feconda"
+                    ],
+                    corretta: 3
+                }
+            ]
+        }
+    };
+
+    let lezioneCorrenteKey = null;
+    let indiceDomanda = 0;
+    let punteggio = 0;
+    let domandeAttive = [];
+    let domandeSbagliateGlobali = [];
+    let inModalitaRipasso = false;
+
+    function inizializzaMenu() {
+        const listaLezioniDiv = document.getElementById("lista-lezioni");
+        listaLezioniDiv.innerHTML = "";
+        
+        for (let key in databaseQuiz) {
+            let btn = document.createElement("button");
+            btn.innerText = databaseQuiz[key].titolo;
+            btn.onclick = () => avviaQuiz(key);
+            listaLezioniDiv.appendChild(btn);
+        }
+
+        if (domandeSbagliateGlobali.length > 0) {
+            document.getElementById("btn-ripasso").classList.remove("nascondi");
+        } else {
+            document.getElementById("btn-ripasso").classList.add("nascondi");
+        }
+    }
+
+    function avviaQuiz(key) {
+        lezioneCorrenteKey = key;
+        domandeAttive = [...databaseQuiz[key].domande];
+        indiceDomanda = 0;
+        punteggio = 0;
+        inModalitaRipasso = false;
+
+        document.getElementById("menu-container").classList.add("nascondi");
+        document.getElementById("risultati-container").classList.add("nascondi");
+        document.getElementById("quiz-container").classList.remove("nascondi");
+        document.getElementById("titolo-lezione-corrente").innerText = databaseQuiz[key].titolo;
+
+        mostraDomanda();
+    }
+
+    function avviaRipassoErrori() {
+        if (domandeSbagliateGlobali.length === 0) return;
+        domandeAttive = [...domandeSbagliateGlobali];
+        indiceDomanda = 0;
+        punteggio = 0;
+        inModalitaRipasso = true;
+
+        document.getElementById("menu-container").classList.add("nascondi");
+        document.getElementById("risultati-container").classList.add("nascondi");
+        document.getElementById("quiz-container").classList.remove("nascondi");
+        document.getElementById("titolo-lezione-corrente").innerText = "Ripasso Domande Sbagliate";
+
+        mostraDomanda();
+    }
+
+    function mostraDomanda() {
+        document.getElementById("btn-prossima").classList.add("nascondi");
+        let d = domandeAttive[indiceDomanda];
+        
+        document.getElementById("progresso").innerText = `Domanda ${indiceDomanda + 1} di ${domandeAttive.length}`;
+        document.getElementById("domanda-testo").innerText = d.testo;
+
+        let opzioniDiv = document.getElementById("opzioni-container");
+        opzioniDiv.innerHTML = "";
+
+        d.opzioni.forEach((opzione, index) => {
+            let btnOp = document.createElement("button");
+            btnOp.className = "btn-risposta";
+            btnOp.innerText = opzione;
+            btnOp.onclick = () => controllaRisposta(index, d.corretta, btnOp);
+            opzioniDiv.appendChild(btnOp);
+        });
+    }
+
+    function controllaRisposta(scelta, corretta, btnSelezionato) {
+        let tuttiBottoni = document.querySelectorAll(".btn-risposta");
+        tuttiBottoni.forEach(b => b.disabled = true);
+
+        if (scelta === corretta) {
+            btnSelezionato.classList.add("corretta");
+            punteggio++;
+        } else {
+            btnSelezionato.classList.add("errata");
+            tuttiBottoni[corretta].classList.add("corretta");
+            
+            // Aggiungi alla lista errori se non è già presente
+            let domandaCorrente = domandeAttive[indiceDomanda];
+            if (!domandeSbagliateGlobali.includes(domandaCorrente)) {
+                domandeSbagliateGlobali.push(domandaCorrente);
+            }
+        }
+
+        document.getElementById("btn-prossima").classList.remove("nascondi");
+    }
+
+    function prossimaDomanda() {
+        indiceDomanda++;
+        if (indiceDomanda < domandeAttive.length) {
+            mostraDomanda();
+        } else {
+            mostraRisultati();
+        }
+    }
+
+    function mostraRisultati() {
+        document.getElementById("quiz-container").classList.add("nascondi");
+        document.getElementById("risultati-container").classList.remove("nascondi");
+
+        let percentuale = Math.round((punteggio / domandeAttive.length) * 100);
+        document.getElementById("testo-punteggio").innerText = `Punteggio: ${punteggio} su ${domandeAttive.length}`;
+        document.getElementById("testo-percentuale").innerText = `Percentuale di risposte esatte: ${percentuale}%`;
+    }
+
+    function tornaAlMenu() {
+        document.getElementById("quiz-container").classList.add("nascondi");
+        document.getElementById("risultati-container").classList.add("nascondi");
+        document.getElementById("menu-container").classList.remove("nascondi");
+        inizializzaMenu();
+    }
+
+    window.onload = inizializzaMenu;
+</script>
+
+</body>
+</html>
